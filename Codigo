@@ -1,0 +1,182 @@
+##Integrantes: Caio Rossini, Carlos Eduardo dos Santos Riberio Filho, Gabriel Danius
+## RM: 555084, 556785 e 555747
+##Turma: ESPI2
+
+
+import random
+import heapq
+from collections import deque
+
+class Ocorrencia:
+    """
+    Representa uma ocorrência de queimada.
+
+    Atributos:
+        id (int): Identificador único da ocorrência.
+        severidade (int): Grau de severidade da ocorrência (maior valor = maior prioridade).
+        local (str): Localização da ocorrência.
+        atendida (bool): Indica se a ocorrência foi atendida ou não.
+    """
+
+    def __init__(self, id, severidade, local, atendida=False):
+        self.id = id
+        self.severidade = severidade
+        self.local = local
+        self.atendida = atendida
+
+    def __lt__(self, other):
+        # Inverte para fila de prioridade máxima (severidade maior = prioridade maior)
+        return self.severidade > other.severidade
+
+
+class SimuladorQueimadas:
+    def __init__(self):
+        self.fila_prioridade = []
+        self.historico = deque(maxlen=10)
+        self._contador_id = 0
+
+    def inserir_ocorrencia(self, severidade, local):
+        self._contador_id += 1
+        ocorrencia = Ocorrencia(self._contador_id, severidade, local)
+        heapq.heappush(self.fila_prioridade, ocorrencia)
+        print(f'[Inserção] Ocorrência ID={ocorrencia.id}, Severidade={ocorrencia.severidade}, Local="{ocorrencia.local}" inserida.')
+
+    def atender_ocorrencia_severidade(self):
+        if self.fila_prioridade:
+            ocorrencia = heapq.heappop(self.fila_prioridade)
+            ocorrencia.atendida = True
+            self.historico.append(ocorrencia)
+            print(f'[Atendimento - Maior Severidade] Ocorrência ID={ocorrencia.id}, Severidade={ocorrencia.severidade}, Local="{ocorrencia.local}" atendida.')
+        else:
+            print('[Atendimento] Nenhuma ocorrência para atender.')
+
+    def atender_ocorrencia_mais_recente(self):
+        if self.fila_prioridade:
+            # A ocorrência mais recente é a que tem o maior ID
+            # Percorrer fila_prioridade para encontrar o que tem maior id
+            max_id = -1
+            idx_max_id = -1
+            for idx, ocorrencia in enumerate(self.fila_prioridade):
+                if ocorrencia.id > max_id:
+                    max_id = ocorrencia.id
+                    idx_max_id = idx
+            # Remove a ocorrência mais recente (com maior id)
+            ocorrencia = self.fila_prioridade.pop(idx_max_id)
+            heapq.heapify(self.fila_prioridade)  # reajusta a heap depois da remoção
+            ocorrencia.atendida = True
+            self.historico.append(ocorrencia)
+            print(f'[Atendimento - Mais Recente] Ocorrência ID={ocorrencia.id}, Severidade={ocorrencia.severidade}, Local="{ocorrencia.local}" atendida.')
+        else:
+            print('[Atendimento] Nenhuma ocorrência para atender.')
+
+    def listar_historico(self):
+        if not self.historico:
+            print('[Histórico] Nenhuma ocorrência atendida ainda.')
+            return
+        print('[Histórico] Últimas ocorrências atendidas:')
+        for o in self.historico:
+            print(f'  - ID={o.id}, Severidade={o.severidade}, Local="{o.local}", Atendida={o.atendida}')
+
+    def listar_pendentes(self):
+        if not self.fila_prioridade:
+            print('[Pendentes] Nenhuma ocorrência pendente na fila de prioridade.')
+            return
+        print('[Pendentes] Ocorrências pendentes (na fila de prioridade):')
+        pendentes_sorted = sorted(self.fila_prioridade, reverse=True)
+        for o in pendentes_sorted:
+            print(f'  - ID={o.id}, Severidade={o.severidade}, Local="{o.local}", Atendida={o.atendida}')
+
+    def limpar_historico(self):
+        self.historico.clear()
+        print('[Histórico] Histórico limpo.')
+
+    def gerar_relatorio(self):
+        if not self.historico:
+            print('[Relatório] Nenhuma ocorrência atendida para relatório.')
+            return
+        relatorio = {}
+        for o in self.historico:
+            relatorio[o.local] = relatorio.get(o.local, 0) + 1
+        print('[Relatório] Quantidade de ocorrências atendidas por região:')
+        for local, total in relatorio.items():
+            print(f'  - Região "{local}": {total} ocorrência(s)')
+
+    def simular_chamadas(self, num_chamadas):
+        locais_possiveis = ['Floresta A', 'Floresta B', 'Floresta C']
+        print(f'[Simulação] Inserindo {num_chamadas} chamadas aleatórias de queimadas.')
+        for _ in range(num_chamadas):
+            severidade = random.randint(1, 10)
+            local = random.choice(locais_possiveis)
+            self.inserir_ocorrencia(severidade, local)
+
+    def inserir_ocorrencia_manual(self):
+        print("\n[Inserir Nova Ocorrência]")
+        while True:
+            try:
+                severidade = int(input("Digite a severidade da ocorrência (1 a 10): ").strip())
+                if 1 <= severidade <= 10:
+                    break
+                else:
+                    print("Severidade deve estar entre 1 e 10.")
+            except ValueError:
+                print("Por favor, insira um número válido para a severidade.")
+        local = input("Digite o local da ocorrência: ").strip()
+        if local == "":
+            print("Local não pode ficar vazio. Tentando novamente...")
+            return self.inserir_ocorrencia_manual()
+        self.inserir_ocorrencia(severidade, local)
+        print("Ocorrência registrada com sucesso.")
+
+
+def main():
+    simulador = SimuladorQueimadas()
+
+    while True:
+        print("\nMenu:")
+        print("1. Inserir nova ocorrência manual")
+        print("2. Atender ocorrência (maior severidade)")
+        print("3. Atender ocorrência (mais recente)")
+        print("4. Listar histórico (ocorrências atendidas)")
+        print("5. Listar ocorrências pendentes (não atendidas)")
+        print("6. Limpar histórico")
+        print("7. Gerar relatório")
+        print("8. Simular chamadas aleatórias")
+        print("9. Sair")
+
+        opcao = input("Escolha uma opção (1-9): ").strip()
+
+        if opcao == '1':
+            simulador.inserir_ocorrencia_manual()
+        elif opcao == '2':
+            simulador.atender_ocorrencia_severidade()
+        elif opcao == '3':
+            simulador.atender_ocorrencia_mais_recente()
+        elif opcao == '4':
+            simulador.listar_historico()
+        elif opcao == '5':
+            simulador.listar_pendentes()
+        elif opcao == '6':
+            simulador.limpar_historico()
+        elif opcao == '7':
+            simulador.gerar_relatorio()
+        elif opcao == '8':
+            while True:
+                try:
+                    n = int(input("Quantas chamadas deseja simular? ").strip())
+                    if n > 0:
+                        break
+                    else:
+                        print("Digite um número positivo.")
+                except ValueError:
+                    print("Por favor, digite um número válido.")
+            simulador.simular_chamadas(n)
+        elif opcao == '9':
+            print("Saindo do programa.")
+            break
+        else:
+            print("Opção inválida. Por favor, escolha uma opção válida de 1 a 9.")
+
+
+if __name__ == "__main__":
+    main()
+
