@@ -4,11 +4,9 @@
 ##Turma: ESPI2##
 
 
-
-
 import random
-import heapq
-from collections import deque
+import heapq # Importa o módulo heapq para funcionalidades de fila de prioridade (min-heap).
+from collections import deque # Importa deque para implementar uma fila de dupla extremidade com tamanho máximo.
 
 class Ocorrencia:
     """
@@ -28,117 +26,174 @@ class Ocorrencia:
         self.atendida = atendida
 
     def __lt__(self, other):
-        # Inverte para fila de prioridade máxima (severidade maior = prioridade maior)
+        """
+        Define o comportamento de comparação 'menor que' para objetos Ocorrencia.
+        Isso é crucial para o heapq, que é um min-heap por padrão.
+        Ao inverter a comparação (self.severidade > other.severidade),
+        transformamos o min-heap em um max-heap baseado na severidade,
+        onde ocorrências com MAIOR severidade terão MAIOR prioridade.
+        """
         return self.severidade > other.severidade
 
 
 class SimuladorQueimadas:
+    """
+    Simula o gerenciamento de ocorrências de queimadas utilizando filas de prioridade e histórico.
+    """
     def __init__(self):
+        # fila_prioridade: Um min-heap (implementado com heapq) que atua como um max-heap
+        # para a severidade devido à sobrecarga do método __lt__ na classe Ocorrencia.
+        # Armazena ocorrências pendentes, ordenadas por severidade (maior primeiro).
         self.fila_prioridade = []
+        # historico: Uma deque (fila de dupla extremidade) com um tamanho máximo de 10.
+        # Armazena as últimas 10 ocorrências atendidas para consulta rápida.
         self.historico = deque(maxlen=10)
+        # _contador_id: Um contador interno para gerar IDs únicos para cada nova ocorrência.
         self._contador_id = 0
 
     def inserir_ocorrencia(self, severidade, local):
-        self._contador_id += 1
-        ocorrencia = Ocorrencia(self._contador_id, severidade, local)
-        heapq.heappush(self.fila_prioridade, ocorrencia)
+        """
+        Cria uma nova ocorrência de queimada e a insere na fila de prioridade.
+        """
+        self._contador_id += 1 # Incrementa o ID para a nova ocorrência.
+        ocorrencia = Ocorrencia(self._contador_id, severidade, local) # Cria um objeto Ocorrencia.
+        heapq.heappush(self.fila_prioridade, ocorrencia) # Insere a ocorrência na fila de prioridade.
         print(f'[Inserção] Ocorrência ID={ocorrencia.id}, Severidade={ocorrencia.severidade}, Local="{ocorrencia.local}" inserida.')
 
     def atender_ocorrencia_severidade(self):
-        if self.fila_prioridade:
-            ocorrencia = heapq.heappop(self.fila_prioridade)
-            ocorrencia.atendida = True
-            self.historico.append(ocorrencia)
+        """
+        Atende a ocorrência com a maior severidade (maior prioridade) da fila.
+        """
+        if self.fila_prioridade: # Verifica se há ocorrências na fila.
+            ocorrencia = heapq.heappop(self.fila_prioridade) # Remove e retorna a ocorrência de maior prioridade.
+            ocorrencia.atendida = True # Marca a ocorrência como atendida.
+            self.historico.append(ocorrencia) # Adiciona a ocorrência ao histórico.
             print(f'[Atendimento - Maior Severidade] Ocorrência ID={ocorrencia.id}, Severidade={ocorrencia.severidade}, Local="{ocorrencia.local}" atendida.')
         else:
             print('[Atendimento] Nenhuma ocorrência para atender.')
 
     def atender_ocorrencia_mais_recente(self):
-        if self.fila_prioridade:
+        """
+        Atende a ocorrência mais recentemente inserida na fila de prioridade (com maior ID).
+        Nota: Esta operação pode ser menos eficiente para um heap, pois exige uma busca linear.
+        """
+        if self.fila_prioridade: # Verifica se há ocorrências na fila.
             max_id = -1
             idx_max_id = -1
+            # Itera sobre a fila de prioridade para encontrar a ocorrência com o maior ID.
             for idx, ocorrencia in enumerate(self.fila_prioridade):
                 if ocorrencia.id > max_id:
                     max_id = ocorrencia.id
                     idx_max_id = idx
+            # Remove a ocorrência encontrada usando seu índice.
             ocorrencia = self.fila_prioridade.pop(idx_max_id)
+            # Reorganiza o heap após a remoção de um elemento arbitrário.
             heapq.heapify(self.fila_prioridade)
-            ocorrencia.atendida = True
-            self.historico.append(ocorrencia)
+            ocorrencia.atendida = True # Marca a ocorrência como atendida.
+            self.historico.append(ocorrencia) # Adiciona a ocorrência ao histórico.
             print(f'[Atendimento - Mais Recente] Ocorrência ID={ocorrencia.id}, Severidade={ocorrencia.severidade}, Local="{ocorrencia.local}" atendida.')
         else:
             print('[Atendimento] Nenhuma ocorrência para atender.')
 
     def listar_historico(self):
-        if not self.historico:
+        """
+        Lista as últimas ocorrências que foram atendidas, armazenadas no histórico.
+        """
+        if not self.historico: # Verifica se o histórico está vazio.
             print('[Histórico] Nenhuma ocorrência atendida ainda.')
             return
         print('[Histórico] Últimas ocorrências atendidas:')
-        for o in self.historico:
+        for o in self.historico: # Itera e imprime cada ocorrência no histórico.
             print(f'  - ID={o.id}, Severidade={o.severidade}, Local="{o.local}", Atendida={o.atendida}')
 
     def listar_pendentes(self):
-        if not self.fila_prioridade:
+        """
+        Lista todas as ocorrências que ainda estão pendentes na fila de prioridade.
+        """
+        if not self.fila_prioridade: # Verifica se a fila de prioridade está vazia.
             print('[Pendentes] Nenhuma ocorrência pendente na fila de prioridade.')
             return
         print('[Pendentes] Ocorrências pendentes (na fila de prioridade):')
+        # Cria uma cópia da fila de prioridade e a ordena para exibição,
+        # pois o heap não garante ordem total, apenas a propriedade do heap.
         pendentes_sorted = sorted(self.fila_prioridade, reverse=True)
-        for o in pendentes_sorted:
+        for o in pendentes_sorted: # Itera e imprime cada ocorrência pendente.
             print(f'  - ID={o.id}, Severidade={o.severidade}, Local="{o.local}", Atendida={o.atendida}')
 
     def limpar_historico(self):
-        self.historico.clear()
+        """
+        Limpa todas as ocorrências do histórico.
+        """
+        self.historico.clear() # Esvazia a deque do histórico.
         print('[Histórico] Histórico limpo.')
 
     def gerar_relatorio(self):
-        if not self.historico:
+        """
+        Gera um relatório da quantidade de ocorrências atendidas por região.
+        """
+        if not self.historico: # Verifica se há ocorrências no histórico para gerar o relatório.
             print('[Relatório] Nenhuma ocorrência atendida para relatório.')
             return
-        relatorio = {}
+        relatorio = {} # Dicionário para armazenar a contagem por local.
         for o in self.historico:
+            # Incrementa a contagem para o local da ocorrência. Se o local não existir, inicia com 0 e adiciona 1.
             relatorio[o.local] = relatorio.get(o.local, 0) + 1
         print('[Relatório] Quantidade de ocorrências atendidas por região:')
-        for local, total in relatorio.items():
+        for local, total in relatorio.items(): # Itera e imprime o relatório.
             print(f'  - Região "{local}": {total} ocorrência(s)')
 
     def simular_chamadas(self, num_chamadas):
-        locais_possiveis = ['Floresta A', 'Floresta B', 'Floresta C']
+        """
+        Simula a inserção de um número especificado de chamadas de queimadas com dados aleatórios.
+        """
+        locais_possiveis = ['Floresta A', 'Floresta B', 'Floresta C'] # Locais predefinidos para simulação.
         print(f'[Simulação] Inserindo {num_chamadas} chamadas aleatórias de queimadas.')
         for _ in range(num_chamadas):
-            severidade = random.randint(1, 10)
-            local = random.choice(locais_possiveis)
-            self.inserir_ocorrencia(severidade, local)
+            severidade = random.randint(1, 10) # Gera severidade aleatória entre 1 e 10.
+            local = random.choice(locais_possiveis) # Escolhe um local aleatoriamente.
+            self.inserir_ocorrencia(severidade, local) # Insere a ocorrência simulada.
 
     def simular_chamadas_crescentes(self, num_chamadas):
+        """
+        Simula a inserção de um número especificado de chamadas de queimadas
+        com severidade em ordem crescente.
+        """
         locais_possiveis = ['Floresta A', 'Floresta B', 'Floresta C']
         print(f'[Simulação] Inserindo {num_chamadas} chamadas aleatórias de queimadas em ordem crescente de severidade.')
-        for severidade in range(1, num_chamadas + 1):
+        for severidade in range(1, num_chamadas + 1): # Severidade vai de 1 até num_chamadas.
             local = random.choice(locais_possiveis)
             self.inserir_ocorrencia(severidade, local)
 
     def inserir_ocorrencia_manual(self):
+        """
+        Permite ao usuário inserir manualmente uma nova ocorrência, solicitando severidade e local.
+        Inclui validação de entrada para a severidade.
+        """
         print("\n[Inserir Nova Ocorrência]")
-        while True:
+        while True: # Loop para garantir uma entrada de severidade válida.
             try:
                 severidade = int(input("Digite a severidade da ocorrência (1 a 10): ").strip())
-                if 1 <= severidade <= 10:
+                if 1 <= severidade <= 10: # Valida se a severidade está no intervalo correto.
                     break
                 else:
                     print("Severidade deve estar entre 1 e 10.")
-            except ValueError:
+            except ValueError: # Captura erro se a entrada não for um número.
                 print("Por favor, insira um número válido para a severidade.")
         local = input("Digite o local da ocorrência: ").strip()
-        if local == "":
+        if local == "": # Valida se o local não está vazio.
             print("Local não pode ficar vazio. Tentando novamente...")
-            return self.inserir_ocorrencia_manual()
-        self.inserir_ocorrencia(severidade, local)
+            return self.inserir_ocorrencia_manual() # Chama a função recursivamente se o local for vazio.
+        self.inserir_ocorrencia(severidade, local) # Insere a ocorrência com os dados fornecidos.
         print("Ocorrência registrada com sucesso.")
 
 
 def main():
-    simulador = SimuladorQueimadas()
+    """
+    Função principal que executa o menu interativo do simulador de queimadas.
+    """
+    simulador = SimuladorQueimadas() # Cria uma instância do simulador.
 
-    while True:
+    while True: # Loop principal do menu.
         print("\nMenu:")
         print("1. Inserir nova ocorrência manual")
         print("2. Atender ocorrência (maior severidade)")
@@ -151,7 +206,7 @@ def main():
         print("9. Sair")
         print("10. Simular chamadas aleatórias em ordem crescente de severidade")
 
-        opcao = input("Escolha uma opção (1-10): ").strip()
+        opcao = input("Escolha uma opção (1-10): ").strip() # Solicita a opção do usuário.
 
         if opcao == '1':
             simulador.inserir_ocorrencia_manual()
@@ -168,7 +223,7 @@ def main():
         elif opcao == '7':
             simulador.gerar_relatorio()
         elif opcao == '8':
-            while True:
+            while True: # Loop para garantir uma entrada numérica positiva.
                 try:
                     n = int(input("Quantas chamadas deseja simular? ").strip())
                     if n > 0:
@@ -180,9 +235,9 @@ def main():
             simulador.simular_chamadas(n)
         elif opcao == '9':
             print("Saindo do programa.")
-            break
+            break # Sai do loop principal, encerrando o programa.
         elif opcao == '10':
-            while True:
+            while True: # Loop para garantir uma entrada numérica positiva.
                 try:
                     n = int(input("Quantas chamadas deseja simular em ordem crescente? ").strip())
                     if n > 0:
@@ -197,4 +252,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main() # Garante que a função main() seja chamada apenas quando o script for executado diretamente.
